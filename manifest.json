@@ -1,0 +1,9 @@
+{
+  "name": "ContactFlow Premium",
+  "short_name": "ContactFlow",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f7fc",
+  "theme_color": "#f7f9ff",
+  "icons": []
+}
