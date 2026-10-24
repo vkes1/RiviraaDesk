@@ -62,7 +62,7 @@ function fresh(c){let a=age(c.dob||'');return {...c,age:a,ageGroup:group(a)}}
 function ageFields(){let a=age(document.getElementById('dob').value);document.getElementById('age').value=a;document.getElementById('ageGroup').value=group(a)}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function toast(s){let e=document.getElementById('toast');e.textContent=s;e.style.display='block';setTimeout(()=>e.style.display='none',2600)}
-function tab(id,btn){['directory','entry','io','backup','analytics'].forEach(x=>document.getElementById(x).classList.toggle('hidden',x!==id));document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x===btn));if(id==='directory')render();if(id==='analytics')analytics();window.scrollTo({top:0,behavior:'smooth'})}
+function tab(id,btn){['directory','entry','io','backup','analytics','bulk'].forEach(x=>document.getElementById(x).classList.toggle('hidden',x!==id));document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x===btn));if(id==='directory')render();if(id==='analytics')analytics();if(id==='bulk'){readBulkTemplates();renderBulkRecipients()}window.scrollTo({top:0,behavior:'smooth'})}
 function goTab(id){let b=document.querySelector(`[data-tab="${id}"]`);tab(id,b)}
 function filterWS(w,b){wsFilter=w;document.querySelectorAll('.filters button').forEach(x=>x.classList.toggle('active',x===b));render()}
 function resetForm(){document.getElementById('contactForm').reset();document.getElementById('cid').value='';document.getElementById('formTitle').textContent='＋ Add / Edit Contact';document.getElementById('state').value='Himachal Pradesh';ageFields()}
