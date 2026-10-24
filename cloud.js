@@ -352,19 +352,42 @@
     } finally { setBusy(false); }
   }
   // Delete a synced private contact from the shared cloud account before removing it locally.
-  window.riviraaDeleteCloudContact = async function(cloudId) {
-    if (!cloudId) return true;
+  window.riviraaDeleteCloudContact = async function(contact) {
+    if (!contact) return true;
     const c = await connect();
     const userResult = await withTimeout(c.auth.getUser(), 12000, 'Timed out checking account before deleting cloud contact.');
     if (userResult.error) throw userResult.error;
     const user = userResult.data && userResult.data.user;
     if (!user) throw new Error('Please sign in again before deleting a synced contact.');
-    const result = await withTimeout(
-      c.from('contacts').delete().eq('id', cloudId).eq('owner_id', user.id).is('workspace_id', null),
-      15000,
-      'Timed out deleting contact from cloud. The local contact was kept.'
-    );
-    if (result.error) throw result.error;
+    let ids = [];
+    if (contact.cloudId) {
+      ids = [contact.cloudId];
+    } else {
+      // Older/local-only records may not have cloudId yet. Match them to their cloud row before deleting.
+      const read = await withTimeout(
+        c.from('contacts').select('id,phone,full_name').eq('owner_id', user.id).is('workspace_id', null),
+        15000,
+        'Timed out finding the cloud contact. The local contact was kept.'
+      );
+      if (read.error) throw read.error;
+      const normPhone = v => { let d=String(v||'').replace(/\\D/g,''); if(d.length===12&&d.startsWith('91'))d=d.slice(2); if(d.length===11&&d.startsWith('0'))d=d.slice(1); return d; };
+      const phone = normPhone(contact.phone);
+      const name = String(contact.fullName||contact.full_name||'').trim().toLocaleLowerCase();
+      const matches = (read.data||[]).filter(row => {
+        const rp=normPhone(row.phone);
+        if (phone) return rp===phone;
+        return !!name && !rp && String(row.full_name||'').trim().toLocaleLowerCase()===name;
+      });
+      ids = matches.map(row=>row.id);
+    }
+    for (const id of ids) {
+      const result = await withTimeout(
+        c.from('contacts').delete().eq('id', id).eq('owner_id', user.id).is('workspace_id', null),
+        15000,
+        'Timed out deleting contact from cloud. The local contact was kept.'
+      );
+      if (result.error) throw result.error;
+    }
     return true;
   };
   document.addEventListener('DOMContentLoaded', async () => {
