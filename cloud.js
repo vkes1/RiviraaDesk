@@ -56,8 +56,15 @@
         <p id="riviraaCloudSignedIn"></p>
         <div class="cloudactions">
           <button id="riviraaSync" type="button">Back up & sync private contacts</button>
+          <button id="riviraaUsersButton" class="secondary" type="button">Admin: User management</button>
           <button id="riviraaSignOut" class="secondary" type="button">Sign out</button>
           <button id="riviraaEditConfig" class="secondary" type="button">Connection settings</button>
+        </div>
+        <div id="riviraaAdminPanel" hidden style="margin-top:14px;border-top:1px solid #e4eaf5;padding-top:14px">
+          <h2>👥 User Management</h2>
+          <p>Admins can view registered account emails, roles and account dates. Passwords are never visible to anyone. Use Supabase’s secure password reset process if a user needs help.</p>
+          <div class="cloudactions"><button id="riviraaRefreshUsers" class="secondary" type="button">Refresh user list</button></div>
+          <div id="riviraaUsersList" class="cloudstatus">Click refresh to load users.</div>
         </div>
       </div>
       <div id="riviraaCloudStatus" class="cloudstatus">Not connected. Save your Supabase URL and publishable key to begin.</div>
@@ -73,6 +80,12 @@
     document.getElementById('riviraaSignUp').addEventListener('click', signUp);
     document.getElementById('riviraaSync').addEventListener('click', syncPrivate);
     document.getElementById('riviraaSignOut').addEventListener('click', signOut);
+    document.getElementById('riviraaUsersButton').addEventListener('click', () => {
+      const panel = document.getElementById('riviraaAdminPanel');
+      panel.hidden = !panel.hidden;
+      if (!panel.hidden) loadAdminUsers();
+    });
+    document.getElementById('riviraaRefreshUsers').addEventListener('click', loadAdminUsers);
     document.getElementById('riviraaEditConfig').addEventListener('click', () => {
       document.getElementById('riviraaCloudConfig').hidden = false;
       document.getElementById('riviraaCloudAccount').hidden = true;
@@ -149,6 +162,41 @@
     account.hidden = !signed; configBox.hidden = signed;
     const label = document.getElementById('riviraaCloudSignedIn');
     if (label) label.textContent = 'Signed in as ' + session.user.email + '. Cloud sync is manual; no background upload runs.';
+  }
+  async function loadAdminUsers() {
+    const target = document.getElementById('riviraaUsersList');
+    if (!target) return;
+    target.textContent = 'Checking administrator access…';
+    try {
+      const c = await connect();
+      const {data:{user},error:userError} = await c.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error('Please sign in again.');
+      const {data:me,error:meError} = await c.from('profiles').select('id,email,role').eq('id',user.id).maybeSingle();
+      if (meError) throw meError;
+      if (!me || me.role !== 'admin') {
+        target.textContent = 'Admin access is not enabled for this account yet. Run supabase-admin-setup.sql in Supabase SQL Editor, then promote your own email to role admin using the final SQL statement in that file. Also expose public.profiles in Data API Settings.';
+        return;
+      }
+      const {data:rows,error} = await c.from('profiles').select('id,email,role,created_at').order('created_at',{ascending:false});
+      if (error) throw error;
+      target.replaceChildren();
+      const table = document.createElement('table');
+      table.style.cssText = 'width:100%;border-collapse:collapse;min-width:0;background:#fff';
+      const head = document.createElement('thead'), hr = document.createElement('tr');
+      ['Email','Role','Account date'].forEach(label => { const th=document.createElement('th'); th.textContent=label; th.style.cssText='text-align:left;padding:9px;border-bottom:1px solid #e4eaf5'; hr.appendChild(th); });
+      head.appendChild(hr); table.appendChild(head);
+      const body=document.createElement('tbody');
+      (rows||[]).forEach(row => {
+        const tr=document.createElement('tr');
+        [row.email||'—',row.role||'user',row.created_at?new Date(row.created_at).toLocaleDateString():'—'].forEach(value=>{const td=document.createElement('td');td.textContent=value;td.style.cssText='padding:9px;border-bottom:1px solid #edf0f6;overflow-wrap:anywhere';tr.appendChild(td);});
+        body.appendChild(tr);
+      });
+      table.appendChild(body); target.appendChild(table);
+      if (!rows || !rows.length) target.textContent='No registered accounts found yet.';
+    } catch(e) {
+      target.textContent='Could not load user list: '+(e.message||String(e))+'. Check that public.profiles is exposed in Data API Settings and its setup SQL has been run.';
+    }
   }
   function toCloud(c, userId, workspaceId) {
     const tags = Array.isArray(c.tags) ? c.tags : String(c.tags || '').split(',').map(x=>x.trim()).filter(Boolean);
