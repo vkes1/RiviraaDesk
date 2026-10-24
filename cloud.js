@@ -46,7 +46,7 @@
   function config() { try { return JSON.parse(localStorage.getItem(CFG_KEY) || '{}'); } catch (_) { return {}; } }
   function status(message, warning) {
     const n = document.getElementById('riviraaCloudStatus');
-    if (n) { n.textContent = message; n.className = 'cloudstatus' + (warning ? ' cloudwarning' : ''); }
+    if (n) { n.hidden = !message; n.textContent = message; n.className = 'cloudstatus' + (warning ? ' cloudwarning' : ''); }
   }
   function setBusy(v) { busy = v; document.querySelectorAll('#riviraaCloud button').forEach(b => b.disabled = v); }
   function buildUI() {
@@ -229,6 +229,7 @@
   }
   async function syncPrivate() {
     if (busy) return;
+    status('Syncing contacts… please wait.', false);
     if (!confirm('Back up & sync now? This uploads local contacts to your signed-in Supabase account and downloads your private cloud contacts to this browser. It does not delete local contacts. Continue?')) return;
     setBusy(true);
     try {
