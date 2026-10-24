@@ -333,8 +333,18 @@
       if(latestErr) throw latestErr;
       const localAfter = await all();
       const latestIds = new Set((latest||[]).map(row=>String(row.id)));
-      // SAFETY: Never automatically delete local contacts during sync.
-      // A missing cloud row may be caused by a temporary/incomplete response; preserve local data for recovery.
+      // Reconcile locally cached contacts whose cloud records were explicitly deleted.
+      // Guard against an empty/incomplete cloud response: never bulk-delete local data if cloud returns zero rows.
+      let localDeletionApplied = 0;
+      const linkedLocal = localAfter.filter(item => item.cloudId && !item.cloudWorkspaceId);
+      if ((latest||[]).length > 0) {
+        for (const item of linkedLocal) {
+          if (!latestIds.has(String(item.cloudId))) {
+            await del(item.id);
+            localDeletionApplied++;
+          }
+        }
+      }
       for (const row of (latest||[])) {
         let match = localAfter.find(x=>String(x.cloudId||'')===String(row.id));
         if (!match) match = localAfter.find(x=>!x.cloudId && samePerson(x,row));
@@ -344,7 +354,7 @@
       if (typeof render === 'function') await render();
       if (typeof analytics === 'function' && !document.getElementById('analytics').classList.contains('hidden')) await analytics();
       if (typeof renderBulkRecipients === 'function' && !document.getElementById('bulk').classList.contains('hidden')) await renderBulkRecipients();
-      status('Sync complete. This device: '+(await all()).length+' contacts. Cloud: '+(latest||[]).length+'. New uploads: '+uploaded+'. Matched/updated: '+matched+'. Downloaded to this device: '+downloaded+'. Local deletion propagation: disabled for safety. Workspace-linked skipped: '+skipped+'.',false);
+      status('Sync complete. This device: '+(await all()).length+' contacts. Cloud: '+(latest||[]).length+'. New uploads: '+uploaded+'. Matched/updated: '+matched+'. Downloaded to this device: '+downloaded+'. Deleted cloud records removed locally: '+localDeletionApplied+'. Workspace-linked skipped: '+skipped+'.',false);
     } catch(e) {
       status('Sync stopped safely: '+(e.message||String(e))+'. Local contacts were not intentionally deleted. If a permission error appears, stop here and share only the error text.',true);
     } finally { setBusy(false); }
