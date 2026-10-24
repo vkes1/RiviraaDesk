@@ -74,7 +74,6 @@
       <div id="riviraaCloudAccount" hidden>
         <p id="riviraaCloudSignedIn"></p>
         <div class="cloudactions">
-          <button id="riviraaBackup" type="button">⬇ Back up contacts</button>
           <button id="riviraaSync" type="button">☁ Sync across devices</button>
           <button id="riviraaUsersButton" class="secondary" type="button">Admin: User management</button>
           <button id="riviraaSignOut" class="secondary" type="button">Sign out</button>
@@ -99,7 +98,6 @@
     document.getElementById('riviraaSaveConfig').addEventListener('click', saveConfig);
     document.getElementById('riviraaSignIn').addEventListener('click', signIn);
     document.getElementById('riviraaSignUp').addEventListener('click', signUp);
-    document.getElementById('riviraaBackup').addEventListener('click', backupLocalContacts);
     document.getElementById('riviraaSync').addEventListener('click', () => syncPrivate(false));
     document.getElementById('riviraaSignOut').addEventListener('click', signOut);
     document.getElementById('riviraaUsersButton').addEventListener('click', () => {
