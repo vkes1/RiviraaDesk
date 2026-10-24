@@ -308,8 +308,9 @@
         // The first sync is intentionally private-only. Do not overwrite workspace-linked records.
         if (item.cloudWorkspaceId) { skipped++; continue; }
         const payload = toCloud(item,user.id,null);
-        // If a previously synced cloud ID is absent, treat it as a cloud deletion; do not re-upload it.
-        if (item.cloudId && !remoteById.has(String(item.cloudId))) continue;
+        // If a stored cloud ID is missing from the current cloud snapshot, do not silently skip
+        // the local contact. First try to recover its cloud match by normalized phone/name;
+        // if no matching row exists, upload it so this device's locally retained contact is not lost.
         let existing = item.cloudId ? remoteById.get(String(item.cloudId)) : null;
         if (!existing) existing = remoteRows.find(r=>samePerson(item,r));
         if (existing) {
