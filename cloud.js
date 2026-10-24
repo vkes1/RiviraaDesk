@@ -256,11 +256,19 @@
       const remoteRows = remote || [];
       const remoteById = new Map(remoteRows.map(r=>[String(r.id),r]));
       // Cross-device matching: older local records may not yet have cloudId.
-      const normPhone = v => String(v||'').replace(/\\D/g,'');
+      const normPhone = v => {
+        let digits=String(v||'').replace(/\\D/g,'');
+        // Normalize common India country-code formats so +91XXXXXXXXXX and XXXXXXXXXX match.
+        if (digits.length===12 && digits.startsWith('91')) digits=digits.slice(2);
+        if (digits.length===11 && digits.startsWith('0')) digits=digits.slice(1);
+        return digits;
+      };
       const normName = v => String(v||'').trim().toLocaleLowerCase();
+      // A normalized phone number is the primary duplicate key. Names can differ or be blank.
       const samePerson = (a,b) => {
-        const ap=normPhone(a.phone), bp=normPhone(b.phone);
-        return !!ap && ap===bp && normName(a.fullName||a.full_name)===normName(b.fullName||b.full_name);
+        const ap=normPhone(a.phone||a.phone_number), bp=normPhone(b.phone||b.phone_number);
+        if (ap && bp) return ap===bp;
+        return !ap && !bp && !!normName(a.fullName||a.full_name) && normName(a.fullName||a.full_name)===normName(b.fullName||b.full_name);
       };
       let uploaded=0, downloaded=0, skipped=0, matched=0;
       for (const original of local) {
