@@ -317,28 +317,33 @@
       };
       let uploaded=0, downloaded=0, skipped=0, matched=0;
       status('Sync 4/5: Uploading and matching contacts…', false);
-      for (const original of local) {
+      for (let index=0; index<local.length; index++) {
+        const original = local[index];
         const item = {...original};
-        // The first sync is intentionally private-only. Do not overwrite workspace-linked records.
-        if (item.cloudWorkspaceId) { skipped++; continue; }
+        // A workspace-linked cloud ID belongs to a different sync scope. Preserve that source
+        // record, but make a private copy in this signed-in account so all local contacts can
+        // sync across this user's devices without modifying the shared workspace record.
+        const wasWorkspaceLinked = !!item.cloudWorkspaceId;
         const payload = toCloud(item,user.id,null);
-        // If a stored cloud ID is missing from the current cloud snapshot, do not silently skip
-        // the local contact. First try to recover its cloud match by normalized phone/name;
-        // if no matching row exists, upload it so this device's locally retained contact is not lost.
-        let existing = item.cloudId ? remoteById.get(String(item.cloudId)) : null;
+        // Only match private rows by ID when the local ID is not workspace-linked; phone number
+        // is the sole fallback duplicate key, never name alone.
+        let existing = !wasWorkspaceLinked && item.cloudId ? remoteById.get(String(item.cloudId)) : null;
         if (!existing) existing = remoteRows.find(r=>samePerson(item,r));
+        if (index % 20 === 0 || index === local.length-1) {
+          status('Sync 4/5: Uploading/matching contact '+(index+1)+' of '+local.length+'…', false);
+        }
         if (existing) {
           item.cloudId = existing.id;
+          delete item.cloudWorkspaceId;
           await put(item);
-          if (String(existing.id)===String(item.cloudId)) {
-            const {error}=await c.from('contacts').update(payload).eq('id',existing.id).eq('owner_id',user.id).is('workspace_id',null);
-            if(error) throw error;
-            matched++;
-          }
+          const {error}=await c.from('contacts').update(payload).eq('id',existing.id).eq('owner_id',user.id).is('workspace_id',null);
+          if(error) throw error;
+          matched++;
         } else {
           const {data,error}=await c.from('contacts').insert(payload).select('id').single();
           if(error) throw error;
           item.cloudId=data.id;
+          delete item.cloudWorkspaceId;
           await put(item);
           uploaded++;
         }
