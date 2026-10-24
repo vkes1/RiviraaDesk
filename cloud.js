@@ -7,7 +7,17 @@
   const DEFAULT_KEY = 'sb_publishable_Ndb_owvM5xwdLdRexOqVrQ_ne8f4X-n';
   let client = null, session = null, busy = false;
   const css = `
-  #riviraaCloud{margin:0 0 16px;padding:16px;border:1px solid #dce5f4;border-radius:16px;background:#fff;box-shadow:0 5px 18px #202c5009}
+  #riviraaCloud{margin:0 0 16px;padding:16px;border:1px solid #e5e9f5;border-radius:20px;background:#fff;box-shadow:0 18px 55px rgba(29,42,85,.08);font-family:Inter,Segoe UI,Arial,sans-serif;color:#17213e}
+  #riviraaCloud h2{font-size:25px;letter-spacing:-.6px;font-weight:800;margin:0 0 8px}
+  #riviraaCloud .cloudintro{font-size:14px;color:#77819a;margin-bottom:22px}
+  #riviraaCloud label{font-size:12px;letter-spacing:.2px;color:#4f5d7a}
+  #riviraaCloud input{padding:13px 14px;border-radius:11px;border-color:#e0e6f2;font-size:14px;transition:border-color .2s,box-shadow .2s}
+  #riviraaCloud input:focus{border-color:#7767ef;box-shadow:0 0 0 3px rgba(87,71,223,.12);outline:0}
+  #riviraaCloud button{padding:12px 18px;border-radius:11px;transition:transform .15s,box-shadow .15s}
+  #riviraaCloud button:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(40,45,100,.12)}
+  #riviraaCloud button.secondary{background:#f0f2fa}
+  #riviraaCloud .cloudstatus:empty{display:none!important}
+  #riviraaCloud .cloudactions{gap:10px;margin-top:16px}
   body.riviraa-logged-out>header,body.riviraa-logged-out>main>*:not(#riviraaCloud){display:none!important}
   body.riviraa-logged-out>main{max-width:560px;padding-top:8vh}
   body.riviraa-logged-out #riviraaCloud{padding:26px}
@@ -97,7 +107,7 @@
     });
     document.getElementById('riviraaRefreshUsers').addEventListener('click', loadAdminUsers);
     document.getElementById('riviraaEditConfig').addEventListener('click', () => status('Connection settings are managed by the app.', false));
-    updateAuthUI();
+    status('Checking your session…', false);
   }
   function loadSdk() {
     return new Promise((resolve, reject) => {
@@ -114,7 +124,7 @@
     if (!c.url || !c.key) throw new Error('Enter your Supabase Project URL and publishable key, then save settings.');
     await loadSdk();
     if (!client || client.__riviraaUrl !== c.url || client.__riviraaKey !== c.key) {
-      client = window.supabase.createClient(c.url, c.key, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+      client = window.supabase.createClient(c.url, c.key, {auth:{storage:window.localStorage,storageKey:'riviraa-desk-auth-v1',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
       client.__riviraaUrl = c.url; client.__riviraaKey = c.key;
       const {data, error} = await client.auth.getSession();
       if (error) throw error;
@@ -280,9 +290,17 @@
       status('Sync stopped safely: '+(e.message||String(e))+'. Local contacts were not intentionally deleted. If a permission error appears, stop here and share only the error text.',true);
     } finally { setBusy(false); }
   }
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     buildUI();
-    const c=config();
-    if(c.url && c.key) connect().then(()=>{ if(session) updateAuthUI(); }).catch(e=>status(e.message||String(e),true));
+    // Restore the saved login before deciding which screen to display.
+    try {
+      await connect();
+      updateAuthUI();
+      status('', false);
+    } catch(e) {
+      updateAuthUI();
+      status(e.message || 'Unable to connect. Please check your connection.', true);
+    }
+    // No inactivity timer: stay signed in until the user chooses Sign out.
   });
 })();
