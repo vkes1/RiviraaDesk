@@ -3,9 +3,17 @@
   'use strict';
   const CFG_KEY = 'riviraa-desk-supabase-config-v1';
   const CLIENT_KEY = 'riviraa-desk-browser-id-v1';
+  const DEFAULT_URL = 'https://zrvvgbadaflimatervsz.supabase.co';
+  const DEFAULT_KEY = 'sb_publishable_Ndb_owvM5xwdLdRexOqVrQ_ne8f4X-n';
   let client = null, session = null, busy = false;
   const css = `
   #riviraaCloud{margin:0 0 16px;padding:16px;border:1px solid #dce5f4;border-radius:16px;background:#fff;box-shadow:0 5px 18px #202c5009}
+  body.riviraa-logged-out>header,body.riviraa-logged-out>main>*:not(#riviraaCloud){display:none!important}
+  body.riviraa-logged-out>main{max-width:560px;padding-top:8vh}
+  body.riviraa-logged-out #riviraaCloud{padding:26px}
+  body.riviraa-logged-in #riviraaCloud{padding:12px 16px}
+  body.riviraa-logged-in #riviraaCloud h2,body.riviraa-logged-in #riviraaCloud .cloudintro,body.riviraa-logged-in #riviraaCloud .cloudwarning{display:none!important}
+  #riviraaCloud #riviraaCloudConfig .cloudgrid:first-child,#riviraaCloud #riviraaSaveConfig,#riviraaCloud #riviraaEditConfig{display:none!important}
   #riviraaCloud h2{margin:0 0 8px;font-size:18px;color:#17213e}
   #riviraaCloud p{margin:5px 0;color:#687795;font-size:12px;line-height:1.5}
   #riviraaCloud .cloudgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -35,7 +43,8 @@
     if (document.getElementById('riviraaCloud')) return;
     const style = el('style'); style.textContent = css; document.head.appendChild(style);
     const box = el('section', {id:'riviraaCloud'}, `
-      <h2>☁️ Secure Cloud Backup & Sync</h2>
+      <h2 id="riviraaLoginTitle">Welcome to Riviraa Desk</h2>
+      <p class="cloudintro">Sign in to open your workspace. Your contacts stay private to your account.</p>
       <p>Optional cloud sync for your <b>private contacts</b>. Your existing browser contacts are not uploaded until you choose “Back up & sync”. Use only your Supabase Project URL and <b>publishable</b> key here. Never enter a secret/service-role key. The password is the one each person creates for their Riviraa Desk login; it is not your Supabase dashboard password. For security, passwords cannot be viewed by the app owner.</p>
       <div id="riviraaCloudConfig">
         <div class="cloudgrid">
@@ -73,8 +82,9 @@
     const main = document.querySelector('main');
     if (main) main.insertBefore(box, main.firstChild);
     const c = config();
-    document.getElementById('riviraaSupabaseUrl').value = c.url || 'https://zrvvgbadaflimatervsz.supabase.co';
-    document.getElementById('riviraaSupabaseKey').value = c.key || '';
+    document.getElementById('riviraaSupabaseUrl').value = c.url || DEFAULT_URL;
+    document.getElementById('riviraaSupabaseKey').value = c.key || DEFAULT_KEY;
+    if (!c.url || !c.key) localStorage.setItem(CFG_KEY, JSON.stringify({url:DEFAULT_URL,key:DEFAULT_KEY}));
     document.getElementById('riviraaSaveConfig').addEventListener('click', saveConfig);
     document.getElementById('riviraaSignIn').addEventListener('click', signIn);
     document.getElementById('riviraaSignUp').addEventListener('click', signUp);
@@ -86,10 +96,7 @@
       if (!panel.hidden) loadAdminUsers();
     });
     document.getElementById('riviraaRefreshUsers').addEventListener('click', loadAdminUsers);
-    document.getElementById('riviraaEditConfig').addEventListener('click', () => {
-      document.getElementById('riviraaCloudConfig').hidden = false;
-      document.getElementById('riviraaCloudAccount').hidden = true;
-    });
+    document.getElementById('riviraaEditConfig').addEventListener('click', () => status('Connection settings are managed by the app.', false));
     updateAuthUI();
   }
   function loadSdk() {
@@ -156,10 +163,13 @@
     catch(e){status(e.message||String(e),true)} finally{setBusy(false)}
   }
   function updateAuthUI() {
+    document.body.classList.toggle('riviraa-logged-in', !!(session && session.user));
+    document.body.classList.toggle('riviraa-logged-out', !(session && session.user));
     const account = document.getElementById('riviraaCloudAccount'), configBox = document.getElementById('riviraaCloudConfig');
     if (!account || !configBox) return;
     const signed = !!session && !!session.user;
     account.hidden = !signed; configBox.hidden = signed;
+    const title = document.getElementById('riviraaLoginTitle'); if (title) title.textContent = signed ? 'Riviraa Desk' : 'Welcome to Riviraa Desk';
     const label = document.getElementById('riviraaCloudSignedIn');
     if (label) label.textContent = 'Signed in as ' + session.user.email + '. Cloud sync is manual; no background upload runs.';
   }
