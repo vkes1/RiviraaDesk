@@ -257,7 +257,6 @@
     try {
       const c = await connect();
       status('Sync 2/5: Checking account…', false);
-      status('Sync 2/5: Checking account…', false);
       const userResult = await withTimeout(c.auth.getUser(), 12000, 'Timed out checking signed-in account after 12 seconds.');
       if (userResult.error) throw userResult.error;
       const user = userResult.data && userResult.data.user;
@@ -265,7 +264,8 @@
       status('Sync 3/5: Reading this device’s contacts…', false);
       const local = await all();
       status('Sync 4/5: Reading cloud contacts…', false);
-      const {data:remote,error:readErr}=await c.from('contacts').select('*').eq('owner_id',user.id).is('workspace_id',null);
+      const remoteResult = await withTimeout(c.from('contacts').select('*').eq('owner_id',user.id).is('workspace_id',null), 15000, 'Timed out reading cloud contacts after 15 seconds. Check the contacts table and Supabase connection.');
+      const remote = remoteResult.data, readErr = remoteResult.error;
       if (readErr) throw readErr;
       const remoteRows = remote || [];
       const remoteById = new Map(remoteRows.map(r=>[String(r.id),r]));
@@ -311,7 +311,8 @@
       }
       // Re-read after uploads; match by cloud ID first, then name+phone so existing device contacts are not duplicated.
       status('Sync 5/5: Verifying cloud contacts…', false);
-      const {data:latest,error:latestErr}=await c.from('contacts').select('*').eq('owner_id',user.id).is('workspace_id',null);
+      const latestResult = await withTimeout(c.from('contacts').select('*').eq('owner_id',user.id).is('workspace_id',null), 15000, 'Timed out verifying cloud contacts after 15 seconds.');
+      const latest = latestResult.data, latestErr = latestResult.error;
       if(latestErr) throw latestErr;
       const localAfter = await all();
       for (const row of (latest||[])) {
