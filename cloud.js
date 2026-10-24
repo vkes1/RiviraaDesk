@@ -294,12 +294,11 @@
         if (digits.length===11 && digits.startsWith('0')) digits=digits.slice(1);
         return digits;
       };
-      const normName = v => String(v||'').trim().toLocaleLowerCase();
-      // A normalized phone number is the primary duplicate key. Names can differ or be blank.
+      // Phone number is the ONLY duplicate/matching key. Names may be identical
+      // for different people; never match records by name alone.
       const samePerson = (a,b) => {
         const ap=normPhone(a.phone||a.phone_number), bp=normPhone(b.phone||b.phone_number);
-        if (ap && bp) return ap===bp;
-        return !ap && !bp && !!normName(a.fullName||a.full_name) && normName(a.fullName||a.full_name)===normName(b.fullName||b.full_name);
+        return !!ap && !!bp && ap===bp;
       };
       let uploaded=0, downloaded=0, skipped=0, matched=0;
       status('Sync 4/5: Uploading and matching contacts…', false);
