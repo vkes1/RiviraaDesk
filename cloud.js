@@ -345,6 +345,8 @@
           item.cloudId=data.id;
           delete item.cloudWorkspaceId;
           await put(item);
+          remoteRows.push({id:data.id,phone:item.phone,phone_number:item.phone});
+          remoteById.set(String(data.id),{id:data.id,phone:item.phone,phone_number:item.phone});
           uploaded++;
         }
       }
