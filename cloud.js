@@ -109,15 +109,22 @@
     document.getElementById('riviraaEditConfig').addEventListener('click', () => status('Connection settings are managed by the app.', false));
     status('Checking your session…', false);
   }
+  function withTimeout(promise, ms, message) {
+    let timer;
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), ms); })
+    ]).finally(() => clearTimeout(timer));
+  }
   function loadSdk() {
-    return new Promise((resolve, reject) => {
+    return withTimeout(new Promise((resolve, reject) => {
       if (window.supabase && window.supabase.createClient) return resolve();
       const s = document.createElement('script');
       s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
       s.onload = () => window.supabase && window.supabase.createClient ? resolve() : reject(new Error('Supabase library did not load.'));
-      s.onerror = () => reject(new Error('Could not load Supabase client library. Check internet connection.'));
+      s.onerror = () => reject(new Error('Could not load Supabase client library. Check internet connection or CDN access.'));
       document.head.appendChild(s);
-    });
+    }), 12000, 'Timed out loading Supabase library after 12 seconds. Check internet/CDN access, then retry.');
   }
   async function connect() {
     const c = config();
@@ -126,7 +133,7 @@
     if (!client || client.__riviraaUrl !== c.url || client.__riviraaKey !== c.key) {
       client = window.supabase.createClient(c.url, c.key, {auth:{storage:window.localStorage,storageKey:'riviraa-desk-auth-v1',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
       client.__riviraaUrl = c.url; client.__riviraaKey = c.key;
-      const {data, error} = await client.auth.getSession();
+      const {data, error} = await withTimeout(client.auth.getSession(), 12000, 'Timed out checking Supabase session after 12 seconds. Check Supabase availability/network.');
       if (error) throw error;
       session = data.session;
       client.auth.onAuthStateChange((_event, s) => { session = s; updateAuthUI(); });
@@ -249,7 +256,8 @@
     try {
       const c = await connect();
       status('Sync 2/5: Checking account…', false);
-      const {data:{user},error:userErr}=await c.auth.getUser();
+      status('Sync 2/5: Checking account…', false);
+      const {data:{user},error:userErr}=await withTimeout(c.auth.getUser(), 12000, 'Timed out checking signed-in account after 12 seconds.');
       if (userErr) throw userErr;
       if (!user) throw new Error('Please sign in first.');
       status('Sync 3/5: Reading this device’s contacts…', false);
