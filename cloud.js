@@ -191,7 +191,7 @@
     account.hidden = !signed; configBox.hidden = signed;
     const title = document.getElementById('riviraaLoginTitle'); if (title) title.textContent = signed ? 'Riviraa Desk' : 'Welcome to Riviraa Desk';
     const label = document.getElementById('riviraaCloudSignedIn');
-    if (label) label.textContent = 'Signed in as ' + session.user.email;
+    if (label) label.textContent = signed ? ('Signed in as ' + session.user.email) : '';
   }
   async function loadAdminUsers() {
     const target = document.getElementById('riviraaUsersList');
