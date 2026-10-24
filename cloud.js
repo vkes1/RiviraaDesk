@@ -344,6 +344,22 @@
       status('Sync stopped safely: '+(e.message||String(e))+'. Local contacts were not intentionally deleted. If a permission error appears, stop here and share only the error text.',true);
     } finally { setBusy(false); }
   }
+  // Delete a synced private contact from the shared cloud account before removing it locally.
+  window.riviraaDeleteCloudContact = async function(cloudId) {
+    if (!cloudId) return true;
+    const c = await connect();
+    const userResult = await withTimeout(c.auth.getUser(), 12000, 'Timed out checking account before deleting cloud contact.');
+    if (userResult.error) throw userResult.error;
+    const user = userResult.data && userResult.data.user;
+    if (!user) throw new Error('Please sign in again before deleting a synced contact.');
+    const result = await withTimeout(
+      c.from('contacts').delete().eq('id', cloudId).eq('owner_id', user.id).is('workspace_id', null),
+      15000,
+      'Timed out deleting contact from cloud. The local contact was kept.'
+    );
+    if (result.error) throw result.error;
+    return true;
+  };
   document.addEventListener('DOMContentLoaded', async () => {
     buildUI();
     // Restore the saved login before deciding which screen to display.
