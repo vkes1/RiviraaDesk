@@ -361,6 +361,16 @@
       status('Sync stopped safely: '+(e.message||String(e))+'. Local contacts were not intentionally deleted. If a permission error appears, stop here and share only the error text.',true);
     } finally { setBusy(false); }
   }
+  // Public helper used by contact add/edit/import flows for automatic cloud saving.
+  window.riviraaSaveToCloud = async function(reason='Changes') {
+    if (!(session && session.user)) {
+      status(reason+' saved on this device. Sign in to save it to the cloud.', false);
+      return false;
+    }
+    status(reason+' saved locally. Saving to cloud…', false);
+    await syncPrivate(true);
+    return true;
+  };
   // Delete a synced private contact from the shared cloud account before removing it locally.
   window.riviraaDeleteCloudContact = async function(contact) {
     if (!contact) return true;
