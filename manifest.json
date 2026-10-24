@@ -1,0 +1,10 @@
+{
+  "name": "Riviraa Desk",
+  "short_name": "Riviraa Desk",
+  "description": "Private local-first contact manager",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fc",
+  "theme_color": "#151a35"
+}
