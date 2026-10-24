@@ -199,8 +199,9 @@
     target.textContent = 'Checking administrator access…';
     try {
       const c = await connect();
-      const {data:{user},error:userError} = await c.auth.getUser();
-      if (userError) throw userError;
+      const userResult = await c.auth.getUser();
+      if (userResult.error) throw userResult.error;
+      const user = userResult.data && userResult.data.user;
       if (!user) throw new Error('Please sign in again.');
       const {data:me,error:meError} = await c.from('profiles').select('id,email,role').eq('id',user.id).maybeSingle();
       if (meError) throw meError;
@@ -257,9 +258,10 @@
       const c = await connect();
       status('Sync 2/5: Checking account…', false);
       status('Sync 2/5: Checking account…', false);
-      const {data:{user},error:userErr}=await withTimeout(c.auth.getUser(), 12000, 'Timed out checking signed-in account after 12 seconds.');
-      if (userErr) throw userErr;
-      if (!user) throw new Error('Please sign in first.');
+      const userResult = await withTimeout(c.auth.getUser(), 12000, 'Timed out checking signed-in account after 12 seconds.');
+      if (userResult.error) throw userResult.error;
+      const user = userResult.data && userResult.data.user;
+      if (!user) throw new Error('No active sign-in session was found. Please sign in again with the same account on each device.');
       status('Sync 3/5: Reading this device’s contacts…', false);
       const local = await all();
       status('Sync 4/5: Reading cloud contacts…', false);
