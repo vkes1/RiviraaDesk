@@ -221,30 +221,46 @@
       if (readErr) throw readErr;
       const remoteRows = remote || [];
       const remoteById = new Map(remoteRows.map(r=>[String(r.id),r]));
-      let uploaded=0, downloaded=0, skipped=0;
+      // Cross-device matching: older local records may not yet have cloudId.
+      const normPhone = v => String(v||'').replace(/\\D/g,'');
+      const normName = v => String(v||'').trim().toLocaleLowerCase();
+      const samePerson = (a,b) => {
+        const ap=normPhone(a.phone), bp=normPhone(b.phone);
+        return !!ap && ap===bp && normName(a.fullName||a.full_name)===normName(b.fullName||b.full_name);
+      };
+      let uploaded=0, downloaded=0, skipped=0, matched=0;
       for (const original of local) {
         const item = {...original};
         // The first sync is intentionally private-only. Do not overwrite workspace-linked records.
         if (item.cloudWorkspaceId) { skipped++; continue; }
         const payload = toCloud(item,user.id,null);
-        if (item.cloudId && remoteById.has(String(item.cloudId))) {
-          const {error}=await c.from('contacts').update(payload).eq('id',item.cloudId).eq('owner_id',user.id).is('workspace_id',null);
-          if(error) throw error;
+        let existing = item.cloudId ? remoteById.get(String(item.cloudId)) : null;
+        if (!existing) existing = remoteRows.find(r=>samePerson(item,r));
+        if (existing) {
+          item.cloudId = existing.id;
+          await put(item);
+          if (String(existing.id)===String(item.cloudId)) {
+            const {error}=await c.from('contacts').update(payload).eq('id',existing.id).eq('owner_id',user.id).is('workspace_id',null);
+            if(error) throw error;
+            matched++;
+          }
         } else {
           const {data,error}=await c.from('contacts').insert(payload).select('id').single();
           if(error) throw error;
           item.cloudId=data.id;
           await put(item);
+          uploaded++;
         }
-        uploaded++;
       }
-      // Re-read after uploads, then merge cloud-only records into the local IndexedDB without deleting anything.
+      // Re-read after uploads; match by cloud ID first, then name+phone so existing device contacts are not duplicated.
       const {data:latest,error:latestErr}=await c.from('contacts').select('*').eq('owner_id',user.id).is('workspace_id',null);
       if(latestErr) throw latestErr;
       const localAfter = await all();
       for (const row of (latest||[])) {
-        const match = localAfter.find(x=>String(x.cloudId||'')===String(row.id));
+        let match = localAfter.find(x=>String(x.cloudId||'')===String(row.id));
+        if (!match) match = localAfter.find(x=>!x.cloudId && samePerson(x,row));
         if (!match) { await put(fromCloud(row,null)); downloaded++; }
+        else if (!match.cloudId) { match.cloudId=row.id; await put(match); }
       }
       if (typeof render === 'function') await render();
       if (typeof analytics === 'function' && !document.getElementById('analytics').classList.contains('hidden')) await analytics();
