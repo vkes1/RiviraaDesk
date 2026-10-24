@@ -333,10 +333,8 @@
       if(latestErr) throw latestErr;
       const localAfter = await all();
       const latestIds = new Set((latest||[]).map(row=>String(row.id)));
-      // Propagate cloud-side deletions to this device, but only for records previously linked to cloud.
-      for (const item of localAfter) {
-        if (item.cloudId && !item.cloudWorkspaceId && !latestIds.has(String(item.cloudId))) await del(item.id);
-      }
+      // SAFETY: Never automatically delete local contacts during sync.
+      // A missing cloud row may be caused by a temporary/incomplete response; preserve local data for recovery.
       for (const row of (latest||[])) {
         let match = localAfter.find(x=>String(x.cloudId||'')===String(row.id));
         if (!match) match = localAfter.find(x=>!x.cloudId && samePerson(x,row));
@@ -346,7 +344,7 @@
       if (typeof render === 'function') await render();
       if (typeof analytics === 'function' && !document.getElementById('analytics').classList.contains('hidden')) await analytics();
       if (typeof renderBulkRecipients === 'function' && !document.getElementById('bulk').classList.contains('hidden')) await renderBulkRecipients();
-      status('Sync complete. This device: '+(await all()).length+' contacts. Cloud: '+(latest||[]).length+'. New uploads: '+uploaded+'. Matched/updated: '+matched+'. Downloaded to this device: '+downloaded+'. Cloud deletions applied: '+localAfter.filter(item=>item.cloudId&&!item.cloudWorkspaceId&&!latestIds.has(String(item.cloudId))).length+'. Workspace-linked skipped: '+skipped+'.',false);
+      status('Sync complete. This device: '+(await all()).length+' contacts. Cloud: '+(latest||[]).length+'. New uploads: '+uploaded+'. Matched/updated: '+matched+'. Downloaded to this device: '+downloaded+'. Local deletion propagation: disabled for safety. Workspace-linked skipped: '+skipped+'.',false);
     } catch(e) {
       status('Sync stopped safely: '+(e.message||String(e))+'. Local contacts were not intentionally deleted. If a permission error appears, stop here and share only the error text.',true);
     } finally { setBusy(false); }
