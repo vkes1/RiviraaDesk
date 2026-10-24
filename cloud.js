@@ -74,7 +74,8 @@
       <div id="riviraaCloudAccount" hidden>
         <p id="riviraaCloudSignedIn"></p>
         <div class="cloudactions">
-          <button id="riviraaSync" type="button">Back up & sync private contacts</button>
+          <button id="riviraaBackup" type="button">⬇ Back up contacts</button>
+          <button id="riviraaSync" type="button">☁ Sync across devices</button>
           <button id="riviraaUsersButton" class="secondary" type="button">Admin: User management</button>
           <button id="riviraaSignOut" class="secondary" type="button">Sign out</button>
           <button id="riviraaEditConfig" class="secondary" type="button">Connection settings</button>
@@ -98,7 +99,8 @@
     document.getElementById('riviraaSaveConfig').addEventListener('click', saveConfig);
     document.getElementById('riviraaSignIn').addEventListener('click', signIn);
     document.getElementById('riviraaSignUp').addEventListener('click', signUp);
-    document.getElementById('riviraaSync').addEventListener('click', syncPrivate);
+    document.getElementById('riviraaBackup').addEventListener('click', backupLocalContacts);
+    document.getElementById('riviraaSync').addEventListener('click', () => syncPrivate(false));
     document.getElementById('riviraaSignOut').addEventListener('click', signOut);
     document.getElementById('riviraaUsersButton').addEventListener('click', () => {
       const panel = document.getElementById('riviraaAdminPanel');
@@ -227,10 +229,21 @@
     if (existing && existing.id != null) c.id = existing.id;
     return c;
   }
-  async function syncPrivate() {
+  async function backupLocalContacts() {
+    try {
+      const records = await all();
+      const payload = {app:'Riviraa Desk',createdAt:new Date().toISOString(),contacts:records};
+      const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='riviraa-contacts-backup-'+new Date().toISOString().slice(0,10)+'.json';
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      status('Backup downloaded: '+records.length+' contacts. Keep this file somewhere safe.',false);
+    } catch(e) { status('Backup failed: '+(e.message||String(e)),true); }
+  }
+  async function syncPrivate(confirmed=false) {
     if (busy) return;
-    status('Syncing contacts… please wait.', false);
-    if (!confirm('Back up & sync now? This uploads local contacts to your signed-in Supabase account and downloads your private cloud contacts to this browser. It does not delete local contacts. Continue?')) return;
+    if (!confirmed && !confirm('Sync now? This matches contacts by cloud ID or name + phone, uploads new local contacts, and downloads contacts saved to your account on other devices. It does not delete local contacts. Continue?')) return;
+    status('Syncing contacts across devices… please wait.', false);
     setBusy(true);
     try {
       const c = await connect();
