@@ -145,6 +145,7 @@
   async function signIn() {
     if (busy) return; setBusy(true);
     try {
+      status('Sync 1/5: Connecting to cloud…', false);
       const c = await connect();
       const email = document.getElementById('riviraaCloudEmail').value.trim();
       const password = document.getElementById('riviraaCloudPassword').value;
@@ -243,14 +244,17 @@
   async function syncPrivate(confirmed=false) {
     if (busy) return;
     if (!confirmed && !confirm('Sync now? This matches contacts by cloud ID or name + phone, uploads new local contacts, and downloads contacts saved to your account on other devices. It does not delete local contacts. Continue?')) return;
-    status('Syncing contacts across devices… please wait.', false);
+    status('Sync 1/5: Connecting to cloud…', false);
     setBusy(true);
     try {
       const c = await connect();
+      status('Sync 2/5: Checking account…', false);
       const {data:{user},error:userErr}=await c.auth.getUser();
       if (userErr) throw userErr;
       if (!user) throw new Error('Please sign in first.');
+      status('Sync 3/5: Reading this device’s contacts…', false);
       const local = await all();
+      status('Sync 4/5: Reading cloud contacts…', false);
       const {data:remote,error:readErr}=await c.from('contacts').select('*').eq('owner_id',user.id).is('workspace_id',null);
       if (readErr) throw readErr;
       const remoteRows = remote || [];
@@ -271,6 +275,7 @@
         return !ap && !bp && !!normName(a.fullName||a.full_name) && normName(a.fullName||a.full_name)===normName(b.fullName||b.full_name);
       };
       let uploaded=0, downloaded=0, skipped=0, matched=0;
+      status('Sync 4/5: Uploading and matching contacts…', false);
       for (const original of local) {
         const item = {...original};
         // The first sync is intentionally private-only. Do not overwrite workspace-linked records.
@@ -295,6 +300,7 @@
         }
       }
       // Re-read after uploads; match by cloud ID first, then name+phone so existing device contacts are not duplicated.
+      status('Sync 5/5: Verifying cloud contacts…', false);
       const {data:latest,error:latestErr}=await c.from('contacts').select('*').eq('owner_id',user.id).is('workspace_id',null);
       if(latestErr) throw latestErr;
       const localAfter = await all();
