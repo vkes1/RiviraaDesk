@@ -211,5 +211,5 @@ function markBulkSent(){if(!bulkPendingContact){alert('Open a contact message fi
 function skipBulkContact(){if(!bulkPendingContact){toast('No open contact to skip');return}let name=bulkPendingContact.contact.fullName||bulkPendingContact.contact.phone;bulkPendingContact=null;document.getElementById('bulkQueueStatus').textContent='Skipped '+name+'. No sent record was saved.'}
 </script>
 <!-- Riviraa Desk deployment refresh: 2026-10-24-v3 -->
-<script src="./cloud.js?v=20261024-17&reconcile=1&importfix=2"></script>
+<script src="./cloud.js?v=20261024-18&savebutton=1&reconcile=1&importfix=2"></script>
 </body></html>
