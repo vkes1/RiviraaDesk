@@ -36,7 +36,7 @@
     const style = el('style'); style.textContent = css; document.head.appendChild(style);
     const box = el('section', {id:'riviraaCloud'}, `
       <h2>☁️ Secure Cloud Backup & Sync</h2>
-      <p>Optional cloud sync for your <b>private contacts</b>. Your existing browser contacts are not uploaded until you choose “Back up & sync”. Use only your Supabase Project URL and <b>publishable</b> key here. Never enter a secret/service-role key.</p>
+      <p>Optional cloud sync for your <b>private contacts</b>. Your existing browser contacts are not uploaded until you choose “Back up & sync”. Use only your Supabase Project URL and <b>publishable</b> key here. Never enter a secret/service-role key. The password is the one each person creates for their Riviraa Desk login; it is not your Supabase dashboard password. For security, passwords cannot be viewed by the app owner.</p>
       <div id="riviraaCloudConfig">
         <div class="cloudgrid">
           <div><label for="riviraaSupabaseUrl">Supabase Project URL</label><input id="riviraaSupabaseUrl" placeholder="https://your-project.supabase.co" autocomplete="url"></div>
@@ -44,7 +44,7 @@
         </div>
         <div class="cloudgrid">
           <div><label for="riviraaCloudEmail">Account email</label><input id="riviraaCloudEmail" type="email" placeholder="you@example.com" autocomplete="username"></div>
-          <div><label for="riviraaCloudPassword">Password</label><input id="riviraaCloudPassword" type="password" placeholder="Supabase account password" autocomplete="current-password"></div>
+          <div><label for="riviraaCloudPassword">Password</label><input id="riviraaCloudPassword" type="password" placeholder="Riviraa Desk account password" autocomplete="current-password"></div>
         </div>
         <div class="cloudactions">
           <button id="riviraaSaveConfig" type="button">Save connection settings</button>
