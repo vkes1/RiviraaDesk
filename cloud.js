@@ -45,7 +45,7 @@
     const box = el('section', {id:'riviraaCloud'}, `
       <h2 id="riviraaLoginTitle">Welcome to Riviraa Desk</h2>
       <p class="cloudintro">Sign in to open your workspace. Your contacts stay private to your account.</p>
-      <p>Optional cloud sync for your <b>private contacts</b>. Your existing browser contacts are not uploaded until you choose “Back up & sync”. Use only your Supabase Project URL and <b>publishable</b> key here. Never enter a secret/service-role key. The password is the one each person creates for their Riviraa Desk login; it is not your Supabase dashboard password. For security, passwords cannot be viewed by the app owner.</p>
+      
       <div id="riviraaCloudConfig">
         <div class="cloudgrid">
           <div><label for="riviraaSupabaseUrl">Supabase Project URL</label><input id="riviraaSupabaseUrl" placeholder="https://your-project.supabase.co" autocomplete="url"></div>
@@ -76,8 +76,8 @@
           <div id="riviraaUsersList" class="cloudstatus">Click refresh to load users.</div>
         </div>
       </div>
-      <div id="riviraaCloudStatus" class="cloudstatus">Not connected. Save your Supabase URL and publishable key to begin.</div>
-      <p class="cloudwarning">Important: first sync uploads local contacts marked as private to the signed-in account. Workspace sharing is not enabled by this first sync button. Keep using Import / Export → Backup as an independent backup.</p>
+      <div id="riviraaCloudStatus" class="cloudstatus" hidden></div>
+      
     `);
     const main = document.querySelector('main');
     if (main) main.insertBefore(box, main.firstChild);
@@ -130,7 +130,7 @@
     if (!key || !/^(sb_publishable_|eyJ)/.test(key)) return status('Enter the Supabase publishable key (sb_publishable_...). Do not use a secret/service-role key.', true);
     localStorage.setItem(CFG_KEY, JSON.stringify({url,key}));
     client = null;
-    status('Connection settings saved in this browser. Next, sign in or create an account.', false);
+    status('', false);
   }
   async function signIn() {
     if (busy) return; setBusy(true);
@@ -141,7 +141,7 @@
       if (!email || !password) throw new Error('Enter your account email and password.');
       const {data,error} = await c.auth.signInWithPassword({email,password});
       if (error) throw error; session = data.session; updateAuthUI();
-      status('Signed in. Your local contacts have not been uploaded yet. Choose “Back up & sync private contacts” when ready.', false);
+      status('', false);
     } catch(e) { status(e.message || String(e), true); } finally { setBusy(false); }
   }
   async function signUp() {
@@ -153,7 +153,7 @@
       if (!email || !password || password.length < 8) throw new Error('Enter an email and a password with at least 8 characters.');
       const {data,error} = await c.auth.signUp({email,password,options:{emailRedirectTo:location.origin + location.pathname}});
       if (error) throw error;
-      if (data.session) { session=data.session; updateAuthUI(); status('Account created and signed in. You can now back up & sync.',false); }
+      if (data.session) { session=data.session; updateAuthUI(); status('',false); }
       else status('Account created. Check your email to confirm the account, then return here and sign in.',false);
     } catch(e) { status(e.message || String(e), true); } finally { setBusy(false); }
   }
@@ -171,7 +171,7 @@
     account.hidden = !signed; configBox.hidden = signed;
     const title = document.getElementById('riviraaLoginTitle'); if (title) title.textContent = signed ? 'Riviraa Desk' : 'Welcome to Riviraa Desk';
     const label = document.getElementById('riviraaCloudSignedIn');
-    if (label) label.textContent = 'Signed in as ' + session.user.email + '. Cloud sync is manual; no background upload runs.';
+    if (label) label.textContent = 'Signed in as ' + session.user.email;
   }
   async function loadAdminUsers() {
     const target = document.getElementById('riviraaUsersList');
