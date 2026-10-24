@@ -257,7 +257,7 @@
       const remoteById = new Map(remoteRows.map(r=>[String(r.id),r]));
       // Cross-device matching: older local records may not yet have cloudId.
       const normPhone = v => {
-        let digits=String(v||'').replace(/\\D/g,'');
+        let digits=String(v||'').replace(/\D/g,'');
         // Normalize common India country-code formats so +91XXXXXXXXXX and XXXXXXXXXX match.
         if (digits.length===12 && digits.startsWith('91')) digits=digits.slice(2);
         if (digits.length===11 && digits.startsWith('0')) digits=digits.slice(1);
@@ -307,7 +307,7 @@
       if (typeof render === 'function') await render();
       if (typeof analytics === 'function' && !document.getElementById('analytics').classList.contains('hidden')) await analytics();
       if (typeof renderBulkRecipients === 'function' && !document.getElementById('bulk').classList.contains('hidden')) await renderBulkRecipients();
-      status('Sync complete. Uploaded/updated local contacts: '+uploaded+'. Downloaded cloud-only contacts: '+downloaded+'. Skipped workspace-linked contacts: '+skipped+'. No local contacts were deleted.',false);
+      status('Sync complete. This device: '+local.length+' contacts. Cloud: '+(latest||[]).length+'. New uploads: '+uploaded+'. Matched/updated: '+matched+'. Downloaded to this device: '+downloaded+'. Workspace-linked skipped: '+skipped+'. No local contacts were deleted.',false);
     } catch(e) {
       status('Sync stopped safely: '+(e.message||String(e))+'. Local contacts were not intentionally deleted. If a permission error appears, stop here and share only the error text.',true);
     } finally { setBusy(false); }
