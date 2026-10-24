@@ -266,6 +266,24 @@
       status('Backup downloaded: '+records.length+' contacts. Keep this file somewhere safe.',false);
     } catch(e) { status('Backup failed: '+(e.message||String(e)),true); }
   }
+  // Fetch all matching rows in pages so the client never relies on the API's default row limit.
+  async function fetchAllContactRows(client, userId) {
+    const pageSize = 500;
+    const rows = [];
+    for (let from = 0; ; from += pageSize) {
+      const to = from + pageSize - 1;
+      const result = await withTimeout(
+        client.from('contacts').select('*').eq('owner_id', userId).is('workspace_id', null).range(from, to),
+        20000,
+        'Timed out reading cloud contacts (rows '+(from+1)+'–'+(to+1)+').'
+      );
+      if (result.error) throw result.error;
+      const page = result.data || [];
+      rows.push(...page);
+      if (page.length < pageSize) break;
+    }
+    return rows;
+  }
   async function syncPrivate(confirmed=false) {
     if (busy) return;
     if (!confirmed && !confirm('Sync now? This matches contacts by cloud ID or name + phone, uploads new local contacts, and downloads contacts saved to your account on other devices. It does not delete local contacts. Continue?')) return;
@@ -281,10 +299,7 @@
       status('Sync 3/5: Reading this device’s contacts…', false);
       const local = await all();
       status('Sync 4/5: Reading cloud contacts…', false);
-      const remoteResult = await withTimeout(c.from('contacts').select('*').eq('owner_id',user.id).is('workspace_id',null), 15000, 'Timed out reading cloud contacts after 15 seconds. Check the contacts table and Supabase connection.');
-      const remote = remoteResult.data, readErr = remoteResult.error;
-      if (readErr) throw readErr;
-      const remoteRows = remote || [];
+      const remoteRows = await fetchAllContactRows(c, user.id);
       const remoteById = new Map(remoteRows.map(r=>[String(r.id),r]));
       // Cross-device matching: older local records may not yet have cloudId.
       const normPhone = v => {
@@ -330,9 +345,7 @@
       }
       // Re-read after uploads; match by cloud ID first, then name+phone so existing device contacts are not duplicated.
       status('Sync 5/5: Verifying cloud contacts…', false);
-      const latestResult = await withTimeout(c.from('contacts').select('*').eq('owner_id',user.id).is('workspace_id',null), 15000, 'Timed out verifying cloud contacts after 15 seconds.');
-      const latest = latestResult.data, latestErr = latestResult.error;
-      if(latestErr) throw latestErr;
+      const latest = await fetchAllContactRows(c, user.id);
       const localAfter = await all();
       const latestIds = new Set((latest||[]).map(row=>String(row.id)));
       // Reconcile locally cached contacts whose cloud records were explicitly deleted.
