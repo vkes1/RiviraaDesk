@@ -153,7 +153,9 @@
       if (!email || !password) throw new Error('Enter your account email and password.');
       const {data,error} = await c.auth.signInWithPassword({email,password});
       if (error) throw error; session = data.session; updateAuthUI();
-      status('', false);
+      status('Signed in. Syncing your contacts across devices…', false);
+      setBusy(false);
+      await syncPrivate(true);
     } catch(e) { status(e.message || String(e), true); } finally { setBusy(false); }
   }
   async function signUp() {
@@ -165,7 +167,7 @@
       if (!email || !password || password.length < 8) throw new Error('Enter an email and a password with at least 8 characters.');
       const {data,error} = await c.auth.signUp({email,password,options:{emailRedirectTo:location.origin + location.pathname}});
       if (error) throw error;
-      if (data.session) { session=data.session; updateAuthUI(); status('',false); }
+      if (data.session) { session=data.session; updateAuthUI(); status('Account created. Syncing your contacts…',false); setBusy(false); await syncPrivate(true); }
       else status('Account created. Check your email to confirm the account, then return here and sign in.',false);
     } catch(e) { status(e.message || String(e), true); } finally { setBusy(false); }
   }
@@ -310,7 +312,8 @@
     try {
       await connect();
       updateAuthUI();
-      status('', false);
+      if (session) { status('Restoring your contacts…', false); await syncPrivate(true); }
+      else status('', false);
     } catch(e) {
       updateAuthUI();
       status(e.message || 'Unable to connect. Please check your connection.', true);
