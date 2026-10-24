@@ -229,9 +229,24 @@
       target.textContent='Could not load user list: '+(e.message||String(e))+'. Check that public.profiles is exposed in Data API Settings and its setup SQL has been run.';
     }
   }
+  function dateForPostgres(value) {
+    const s = String(value || '').trim();
+    if (!s) return null;
+    // Accept ISO dates and common Indian formats such as DD.MM.YYYY, DD/MM/YYYY, DD-MM-YYYY.
+    let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+    m = s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
+    if (m) {
+      const day=Number(m[1]), month=Number(m[2]), year=Number(m[3]);
+      const d=new Date(Date.UTC(year,month-1,day));
+      if (d.getUTCFullYear()!==year || d.getUTCMonth()!==month-1 || d.getUTCDate()!==day) throw new Error('Invalid date: '+s+'. Use DD.MM.YYYY or YYYY-MM-DD.');
+      return year+'-'+String(month).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    }
+    throw new Error('Unsupported date format: '+s+'. Use DD.MM.YYYY or YYYY-MM-DD.');
+  }
   function toCloud(c, userId, workspaceId) {
     const tags = Array.isArray(c.tags) ? c.tags : String(c.tags || '').split(',').map(x=>x.trim()).filter(Boolean);
-    return {owner_id:userId,workspace_id:workspaceId||null,full_name:c.fullName||'',workspace:c.workspace||'',phone:c.phone||'',state:c.state||'',district_city:c.district||'',dob:c.dob||null,gender:c.gender||'',game_course:c.game||'',category:c.category||'',status:c.status||'New',follow_up_date:c.followup||null,follow_up_action:c.followupAction||'',tags,notes:c.notes||'',updated_at:new Date().toISOString()};
+    return {owner_id:userId,workspace_id:workspaceId||null,full_name:c.fullName||'',workspace:c.workspace||'',phone:c.phone||'',state:c.state||'',district_city:c.district||'',dob:dateForPostgres(c.dob),gender:c.gender||'',game_course:c.game||'',category:c.category||'',status:c.status||'New',follow_up_date:dateForPostgres(c.followup),follow_up_action:c.followupAction||'',tags,notes:c.notes||'',updated_at:new Date().toISOString()};
   }
   function fromCloud(r, existing) {
     const c = {cloudId:r.id,fullName:r.full_name||'',workspace:r.workspace||'MGA',phone:r.phone||'',state:r.state||'',district:r.district_city||'',dob:r.dob||'',gender:r.gender||'',game:r.game_course||'',category:r.category||'',status:r.status||'New',followup:r.follow_up_date||'',followupAction:r.follow_up_action||'',tags:Array.isArray(r.tags)?r.tags.join(', '):(r.tags||''),notes:r.notes||'',createdAt:r.created_at?new Date(r.created_at).getTime():Date.now()};
